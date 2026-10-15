@@ -1,0 +1,27 @@
+name: Keep Spot VM Alive
+
+on:
+  schedule:
+    # Checks every 15 minutes (24/7)
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # Lets you test it manually with 1 click
+
+jobs:
+  check-and-start:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Check VM status and Start if Deallocated
+        run: |
+          STATUS=$(az vm get-instance-view --resource-group "GEHIHI" --name "Gehihi-Recommended" --query "instanceView.statuses[?starts_with(code, 'PowerState/')].displayStatus" -o tsv)
+          echo "Current VM status: $STATUS"
+          if [ "$STATUS" != "VM running" ]; then
+            echo "VM is not running! Starting Gehihi-Recommended..."
+            az vm start --resource-group "GEHIHI" --name "Gehihi-Recommended"
+          else
+            echo "VM is already running normally."
+          fi
